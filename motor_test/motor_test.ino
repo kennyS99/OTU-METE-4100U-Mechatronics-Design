@@ -1,10 +1,11 @@
 #include <AFMotor.h>
 #include <util/atomic.h>
-long prevT = 0;
-float eprev = 0;
-float eintegral = 0;
-float u;
-int pos = 0;
+#include <PID_v1.h>
+#include <Adafruit_VL53L0X.h>
+#include <SharpIR.h>
+
+//-------------------------------------------------------------------//
+//Motor and econder define
 AF_DCMotor motor_Left(1);
 AF_DCMotor motor_Right(2);
 
@@ -21,7 +22,10 @@ boolean Direction;      // the rotation direction
 byte encoder1PinALast;   // encoderPinA last pulse
 int pulseCountRight = 0; // the number of the pulses
 boolean Direction1;      // the rotation direction
+//-------------------------------------------------------------------//
 
+//-------------------------------------------------------------------//
+//Turning parameter define
 int ppr_left = 2850;   // pulse per rotation
 int ppr_right = 2800;   // pulse per rotation
 //ppr 2920, turn 90 degree, 1336
@@ -32,8 +36,55 @@ float pi = 3.14; // Pi
 // float C = pi * pivotD; // Circumference of the base diameter
 float revDistance = pi * 10.8;              // distance travelled in 1 revolution
 float revTire = revDistance / (pi * tireD); // per tire need to rotate for one robot rotate
-
 boolean a;
+//-------------------------------------------------------------------//
+
+//-------------------------------------------------------------------//
+//ToF sensor define
+// address we will assign if dual sensor is present
+#define LOX1_ADDRESS 0x30
+#define LOX2_ADDRESS 0x31
+
+// set the pins to shutdown
+#define SHT_LOX1 39
+#define SHT_LOX2 38
+
+// objects for the vl53l0x
+Adafruit_VL53L0X lox1 = Adafruit_VL53L0X();
+Adafruit_VL53L0X lox2 = Adafruit_VL53L0X();
+
+// this holds the measurement
+VL53L0X_RangingMeasurementData_t measureRight; // Right
+VL53L0X_RangingMeasurementData_t measureLeft;  // Left
+//-------------------------------------------------------------------//
+
+
+//-------------------------------------------------------------------//
+//Sharp IR distance sensor
+#define IR A0 // define signal pin
+#define model 215 // used 1080 because model GP2Y0A21YK0F is used
+SharpIR SharpIR(IR, model);
+int frontDistance;
+//-------------------------------------------------------------------//
+
+
+//-------------------------------------------------------------------//
+// Wall following PID parameters
+double Setpoint, Input, Output;
+double Kp = 6, Ki = 10, Kd = 0.8;
+PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+int baseSpeed = 100; // BaseSpeed for the wallfollow algorithm
+int speedLeft, speedRight;
+int counter = 0; // counter for the positioning of the robot
+
+// Turning PID parameters
+long prevT = 0;
+float eprev = 0;
+float eintegral = 0;
+float u;
+int pos = 0;
+//-------------------------------------------------------------------//
+char startWall; // Variable for Which wall to follow
 
 void setup() {
   // Begin the serial port
@@ -45,22 +96,82 @@ void setup() {
 
   attachInterrupt(digitalPinToInterrupt(encoder0pinA), motorOnePulse, CHANGE); // attach the interrupt
   attachInterrupt(digitalPinToInterrupt(encoder1pinA), motorTwoPulse, CHANGE); // attach the interrupt
-  //checkPulse_moveleft(90);
-  a = true;
-  Serial.println(a);
+  
+  // Shutdown pins for the LOX sensors
+  pinMode(SHT_LOX1, OUTPUT);
+  pinMode(SHT_LOX2, OUTPUT);
+
+  // Both in reset mode
+  digitalWrite(SHT_LOX1, LOW);
+  digitalWrite(SHT_LOX2, LOW);
+  setID(); // Setting the ID's for the TOF sensors to work both at the same time.
+
+  // Setpoint distance from the wall for the PID. unit mm
+  Setpoint = 45;
+
+  // turn the PID on
+  myPID.SetMode(AUTOMATIC);
+
+  // Delay the robot start
+  delay(1000);
+
+  startWall = 'R';
 }
 
 void loop() {
 
 
-robotForward(150,150);
-delay(2000);
-robotStop();
-delay(2000);
-checkPulse_moveright(90);
-robotStop();
-delay(2000);
+}
+void setSpeeds()
+{
+  // Measure the distance
+  measureDistance();
 
+  // Run the PID controller
+  myPID.Compute();
+
+  if (startWall == 'R')
+  {
+    // Set the speeds of both motors according to the PID. Experimentally determined
+    speedLeft = (baseSpeed + 10) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
+    speedRight = baseSpeed + (int)(Output / 2);     // Left speed should be higher when it is closer to the wall.
+
+  }
+  else if (startWall == 'L')
+  {
+    // Set the speeds of both motors according to the PID. Experimentally determined
+
+    speedRight = (baseSpeed + 10) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
+    speedLeft = baseSpeed + (int)(Output / 2);     // Left speed should be higher when it is closer to the wall.
+  }
+  else
+  {
+    // Stop the robot
+    robotStop();
+  }
+
+  // Check the range of Output as it is from 0 to 255.
+  if (speedLeft > 255)
+  {
+    speedLeft = 255;
+  }
+  else if (speedLeft < 0)
+  {
+    speedLeft = 0;
+  }
+
+  // Check the range of Output as it is from 0 to 255.
+  if (speedRight > 255)
+  {
+    speedRight = 255;
+  }
+  else if (speedRight < 0)
+  {
+    speedRight = 0;
+  }
+
+  // Set the motors to move straight and writing the speed to the motors.
+  robotForward(speedLeft,speedRight);
 }
 
 void robotForward(int speed_left, int speed_right){
@@ -220,4 +331,72 @@ void pid_turning(float target){
   u = kp*e + kd*dedt + ki*eintegral;
   // store previous error
   eprev = e;
+}
+
+void measureDistance()
+{
+  frontDistance = SharpIR.distance();
+  double average;
+  // Take reading from both the sensors
+  read_dual_sensors();
+
+  // Set the input to the PID according to which wall we are following
+  if (startWall == 'R')
+  {
+    for (int i = 0; i < 5; i++)
+    {
+      average = measureRight.RangeMilliMeter + average;
+    }
+    Input = average/5;
+  }
+  else if (startWall == 'L')
+  {
+    for (int i = 0; i < 5; i++)
+    {
+      average = measureLeft.RangeMilliMeter + average;
+    }
+    Input = average/5;
+  }
+}
+void setID()
+{
+  // all reset
+  digitalWrite(SHT_LOX1, LOW);
+  digitalWrite(SHT_LOX2, LOW);
+  delay(10);
+  // all unreset
+  digitalWrite(SHT_LOX1, HIGH);
+  digitalWrite(SHT_LOX2, HIGH);
+  delay(10);
+
+  // activating LOX1 and reseting LOX2
+  digitalWrite(SHT_LOX1, HIGH);
+  digitalWrite(SHT_LOX2, LOW);
+
+  // initing LOX1
+  if (!lox1.begin(LOX1_ADDRESS))
+  {
+    Serial.println(F("Failed to boot first VL53L0X"));
+    while (1)
+      ;
+  }
+  delay(10);
+
+  // activating LOX2
+  digitalWrite(SHT_LOX2, HIGH);
+  delay(10);
+
+  // initing LOX2
+  if (!lox2.begin(LOX2_ADDRESS))
+  {
+    Serial.println(F("Failed to boot second VL53L0X"));
+    while (1)
+      ;
+  }
+}
+
+void read_dual_sensors()
+{
+  lox1.rangingTest(&measureRight, false); // pass in 'true' to get debug data printout!
+  lox2.rangingTest(&measureLeft, false);  // pass in 'true' to get debug data printout!
 }
