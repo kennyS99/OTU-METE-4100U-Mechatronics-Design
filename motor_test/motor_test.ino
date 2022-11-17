@@ -23,7 +23,7 @@ int pulseCountRight = 0; // the number of the pulses
 boolean Direction1;      // the rotation direction
 
 int ppr_left = 2850;   // pulse per rotation
-// int ppr_right = 2800;   // pulse per rotation
+int ppr_right = 2800;   // pulse per rotation
 //ppr 2920, turn 90 degree, 1336
 //ppr 2800, turn 90 degree, 1281
 // float pivotD = 6; // Pivot Diameter cm
