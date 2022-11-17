@@ -164,7 +164,7 @@ void loop()
 // Check for walls on the right or left and make turns accordingly
 void checkWall()
 {
-  read_dual_sensors(); // Read both the TOF sensors
+  read_three_sensors(); // Read both the TOF sensors
 
   if (startWall == 'R')
   {
@@ -260,7 +260,7 @@ void measureDistance()
 {
   double average;
   // Take reading from both the sensors
-  read_dual_sensors();
+  read_three_sensors();
 
   // Set the input to the PID according to which wall we are following
   if (startWall == 'R')
@@ -441,7 +441,7 @@ void setID()
   }
 }
 
-void read_dual_sensors()
+void read_three_sensors()
 {
   lox1.rangingTest(&measureRight, false); // pass in 'true' to get debug data printout!
   lox2.rangingTest(&measureLeft, false);  // pass in 'true' to get debug data printout!

@@ -26,8 +26,10 @@ boolean Direction1;      // the rotation direction
 
 //-------------------------------------------------------------------//
 //Turning parameter define
-int ppr_left = 2850;   // pulse per rotation
-int ppr_right = 2800;   // pulse per rotation
+// int ppr_left = 2920;   // pulse per rotation
+// int ppr_right = 3000;   // pulse per rotation
+int ppr_left = 3220;
+int ppr_right = 3300;
 //ppr 2920, turn 90 degree, 1336
 //ppr 2800, turn 90 degree, 1281
 // float pivotD = 6; // Pivot Diameter cm
@@ -64,7 +66,6 @@ VL53L0X_RangingMeasurementData_t measureLeft;  // Left
 #define IR A0 // define signal pin
 #define model 215 // used 1080 because model GP2Y0A21YK0F is used
 SharpIR SharpIR(IR, model);
-int frontDistance;
 //-------------------------------------------------------------------//
 
 
@@ -116,12 +117,61 @@ void setup() {
   delay(1000);
 
   startWall = 'R';
+  
 }
 
 void loop() {
+  int frontDistance = SharpIR.distance();
 
+  if (frontDistance <= 5)
+  {
+    robotStop();
+    delay(1000);
+    checkWall();
+  } else{
+    setSpeeds();
+  }
 
 }
+
+void checkWall()
+{
+  read_dual_sensors(); // Read both the TOF sensors and front SharpIR sensors
+
+  if (startWall == 'R')
+  {
+      // If not then turn left 90 degrees
+      checkPulse_moveleft(90);
+      robotStop();
+      delay(500);
+      counter++; // Increase the counter which keeps track of turns
+    
+  }
+  else if (startWall == 'L')
+  {
+    // If following the left wall
+
+      // If not then turn right 90 degrees
+      checkPulse_moveright(90);
+      robotStop();
+      delay(500);
+      counter++; // Increase the counter which keeps track of turns
+      
+    //---------Robot Positioning in the Maze ---------------------//
+    // If the robot needs to switch to right wall follow then switch
+    // if (counter == turns)
+    // {
+    //   motorStop();
+    //   delay(500);
+    //   moveForward(2);
+    //   motorStop();
+    //   delay(4000);
+    //   startWall = 'R';
+    // //-----------------------------------------------------------//
+    // }
+  }
+}
+
 void setSpeeds()
 {
   // Measure the distance
@@ -141,7 +191,7 @@ void setSpeeds()
   {
     // Set the speeds of both motors according to the PID. Experimentally determined
 
-    speedRight = (baseSpeed + 10) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
+    speedRight = (baseSpeed + 30) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
     speedLeft = baseSpeed + (int)(Output / 2);     // Left speed should be higher when it is closer to the wall.
   }
   else
@@ -262,31 +312,29 @@ void checkPulse_moveleft(float angle)
 {
   pulseCountLeft = 0;
   a = true;
-   float turns = (angle / 360) * revTire;
-   int pulses = turns * ppr_right;
-   
+  float turns = (angle / 360) * revTire;
+  int pulses = turns * ppr_left;
   while (a == true)
-    {
-      pid_turning(pulses);
+  {
+    pid_turning(pulses);
     if(u < 0){
     robot_turnLeft();
    }else if (u > 0)
    {
     robot_turnRight();
-   }
-    //Serial.println(pulseCountRight);
+   } else{
     robotStop();
     a = false;
-    }
+   }
+  }
 }
 
 void checkPulse_moveright(float angle)
 {
   pulseCountLeft = 0;
   a = true;
-   float turns = (angle / 360) * revTire;
-   int pulses = turns * ppr_right;
-   pid_turning(pulses);
+  float turns = (angle / 360) * revTire;
+  int pulses = turns * ppr_right;
   while (a == true)
   {
     pid_turning(pulses);
@@ -302,9 +350,9 @@ void checkPulse_moveright(float angle)
   }
 }
 void pid_turning(float target){
-  float kp = 4;
-  float kd = 0.4;
-  float ki = 0.0;
+  float kp = 10;
+  float kd = 2;
+  float ki = 0;
   // time difference
   long currT = micros();
   float deltaT = ((float) (currT - prevT))/( 1.0e6 );
@@ -335,7 +383,6 @@ void pid_turning(float target){
 
 void measureDistance()
 {
-  frontDistance = SharpIR.distance();
   double average;
   // Take reading from both the sensors
   read_dual_sensors();
