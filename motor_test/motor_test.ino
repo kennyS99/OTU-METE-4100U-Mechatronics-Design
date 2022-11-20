@@ -116,11 +116,39 @@ void setup() {
   // Delay the robot start
   delay(1000);
 
-  startWall = 'R';
+  startWall = 'L';
   
 }
-
+boolean turnTaken = true;
 void loop() {
+
+  if(turnTaken == true){
+    switch (counter) {
+      case 3:
+        startWall = 'R';
+        robotForward(100,100);
+        delay(500);
+        Serial.println("This is Switch");
+        turnTaken = false;
+        break;
+      // case 9:
+      //   moveForwardTurns(1.9);
+      //   moveRight(70);
+      //   startWall = 'L';
+      //   break;
+      // case 10:
+      //   Setpoint = 70;
+      //   break;
+      // case 12:
+      //   moveRight(20);
+      //   moveForwardTurns(1.0);
+      //   gripperDown(170);
+      //   gripperOpen();
+      //   startWall = 'E';
+      //   break;
+    }
+  }
+
   int frontDistance = SharpIR.distance();
 
   if (frontDistance <= 5)
@@ -131,7 +159,6 @@ void loop() {
   } else{
     setSpeeds();
   }
-
 }
 
 void checkWall()
@@ -179,18 +206,19 @@ void setSpeeds()
 
   // Run the PID controller
   myPID.Compute();
-
+  
   if (startWall == 'R')
   {
+    Serial.println("This is right follower");
     // Set the speeds of both motors according to the PID. Experimentally determined
-    speedLeft = (baseSpeed + 10) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
+    speedLeft = (baseSpeed + 15) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
     speedRight = baseSpeed + (int)(Output / 2);     // Left speed should be higher when it is closer to the wall.
 
   }
   else if (startWall == 'L')
   {
     // Set the speeds of both motors according to the PID. Experimentally determined
-
+    Serial.println("This is left follower");
     speedRight = (baseSpeed + 30) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
     speedLeft = baseSpeed + (int)(Output / 2);     // Left speed should be higher when it is closer to the wall.
   }
@@ -365,7 +393,7 @@ void pid_turning(float target){
 //     pos = abs(pulseCountRight);
 //   }
   pos = abs(pulseCountLeft);
-  Serial.println(pulseCountLeft);
+  // Serial.println(pulseCountLeft);
   // error
   int e = pos - target;
 
@@ -386,7 +414,7 @@ void measureDistance()
   double average;
   // Take reading from both the sensors
   read_dual_sensors();
-
+  
   // Set the input to the PID according to which wall we are following
   if (startWall == 'R')
   {
