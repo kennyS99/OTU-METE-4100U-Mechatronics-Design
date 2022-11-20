@@ -1,0 +1,33 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/27129/Documents/Arduino/libraries/Adafruit_Motor_Shield_library",
+                "C:/Users/27129/Documents/Arduino/libraries/Adafruit_VL53L0X-master/src",
+                "C:/Users/27129/Documents/Arduino/libraries/Arduino-PID-Library-master",
+                "C:/Users/27129/Documents/Arduino/libraries/SharpIR-master",
+                "C:/Users/27129/Documents/Arduino/libraries/Wire",
+                "C:/Users/27129/AppData/Local/Arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino",
+                "C:/Users/27129/AppData/Local/Arduino15/packages/arduino/hardware/avr/1.8.6/variants/leonardo"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "F_CPU=16000000L",
+                "ARDUINO=10805",
+                "ARDUINO_AVR_UNO",
+                "ARDUINO_ARCH_AVR",
+                "USBCON"
+            ],
+            "compilerPath": "C:/Users/27129/AppData/Local/Arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "clang-x64"
+            
+        }
+    ],
+    "version": 4
+}
