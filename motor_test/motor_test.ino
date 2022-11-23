@@ -28,8 +28,8 @@ boolean Direction1;      // the rotation direction
 //Turning parameter define
 // int ppr_left = 2920;   // pulse per rotation
 // int ppr_right = 3000;   // pulse per rotation
-int ppr_left = 3220;
-int ppr_right = 3300;
+int ppr_left = 2820;
+int ppr_right = 2800;
 //ppr 2920, turn 90 degree, 1336
 //ppr 2800, turn 90 degree, 1281
 // float pivotD = 6; // Pivot Diameter cm
@@ -86,6 +86,7 @@ float u;
 int pos = 0;
 //-------------------------------------------------------------------//
 char startWall; // Variable for Which wall to follow
+char turning;
 
 void setup() {
   // Begin the serial port
@@ -117,27 +118,69 @@ void setup() {
   delay(1000);
 
   startWall = 'L';
+  turning = 'N'; //turning algrithms(N means normal case, C means coner cases)
   
 }
 boolean turnTaken = true;
 void loop() {
 
+  int frontDistance = SharpIR.distance();
+  if (turning == 'N')
+  {
+    if (frontDistance <= 2)
+    { 
+        robotForward(150,150);
+        delay(500);
+        robotStop();
+        delay(1000);
+        checkWall();
+      } else{
+        setSpeeds();
+    }
+  }else if (turning == 'C')
+  {
+    if (frontDistance <= 2)
+    { 
+        robotForward(150,150);
+        delay(500);
+        robotStop();
+        delay(1000);
+        checkWall_Compared();
+      } else{
+        setSpeeds();
+    }
+  }
+    
   if(turnTaken == true){
     switch (counter) {
       case 3:
         startWall = 'R';
-        robotForward(100,100);
+        robotForward(150,150);
+        delay(500);
+        robotStop();
         delay(500);
         Serial.println("This is Switch");
         turnTaken = false;
         break;
-      // case 9:
-      //   moveForwardTurns(1.9);
-      //   moveRight(70);
-      //   startWall = 'L';
-      //   break;
+      case 6:
+        turning = 'C';
+        turnTaken = false;
+        break;
+      case 7:
+        startWall = 'L';
+        turning = 'N';
+        turnTaken = false;
+        break;
       // case 10:
-      //   Setpoint = 70;
+      //   if (frontDistance <= 7)
+      //   {
+      //     robotForward(150,150);
+      //     delay(500);
+      //     robotStop();
+      //     delay(1000);
+      //     checkWall();
+      //   }
+      //   turnTaken = false;
       //   break;
       // case 12:
       //   moveRight(20);
@@ -148,62 +191,71 @@ void loop() {
       //   break;
     }
   }
-
-  int frontDistance = SharpIR.distance();
-
-  if (frontDistance <= 5)
-  {
-    robotStop();
-    delay(1000);
-    checkWall();
-  } else{
-    setSpeeds();
-  }
 }
 
 void checkWall()
 {
-  read_dual_sensors(); // Read both the TOF sensors and front SharpIR sensors
-
+  read_dual_sensors(); // Read both the TOF sensors
+  
+  
   if (startWall == 'R')
   {
       // If not then turn left 90 degrees
+      robotBackward(50,50);
+      delay(500);
       checkPulse_moveleft(90);
       robotStop();
       delay(500);
       counter++; // Increase the counter which keeps track of turns
-    
+      turnTaken = true;
   }
   else if (startWall == 'L')
   {
     // If following the left wall
 
       // If not then turn right 90 degrees
+      robotBackward(50,50);
+      delay(500);
       checkPulse_moveright(90);
       robotStop();
       delay(500);
       counter++; // Increase the counter which keeps track of turns
+      turnTaken = true;
       
-    //---------Robot Positioning in the Maze ---------------------//
-    // If the robot needs to switch to right wall follow then switch
-    // if (counter == turns)
-    // {
-    //   motorStop();
-    //   delay(500);
-    //   moveForward(2);
-    //   motorStop();
-    //   delay(4000);
-    //   startWall = 'R';
-    // //-----------------------------------------------------------//
-    // }
   }
 }
 
+void checkWall_Compared(){
+
+  if (measureRight.RangeMilliMeter < 100 && measureLeft.RangeMilliMeter > 130)
+  {
+        // If not then turn left 90 degrees
+    robotBackward(50,50);
+    delay(500);
+    checkPulse_moveleft(90);
+    robotStop();
+    delay(500);
+    counter++; // Increase the counter which keeps track of turns
+    turnTaken = true;
+  } else if (measureRight.RangeMilliMeter > 130 && measureLeft.RangeMilliMeter < 100)
+  {
+    // If following the left wall
+
+    // If not then turn right 90 degrees
+    robotBackward(50,50);
+    delay(500);
+    checkPulse_moveright(90);
+    robotStop();
+    delay(500);
+    counter++; // Increase the counter which keeps track of turns
+    turnTaken = true;
+  }
+}
 void setSpeeds()
 {
   // Measure the distance
   measureDistance();
-
+  Output = 0;
   // Run the PID controller
   myPID.Compute();
   
@@ -211,7 +263,7 @@ void setSpeeds()
   {
     Serial.println("This is right follower");
     // Set the speeds of both motors according to the PID. Experimentally determined
-    speedLeft = (baseSpeed + 15) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
+    speedLeft = (baseSpeed + 30) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
     speedRight = baseSpeed + (int)(Output / 2);     // Left speed should be higher when it is closer to the wall.
 
   }
