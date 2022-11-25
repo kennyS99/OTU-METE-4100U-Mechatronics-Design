@@ -28,8 +28,8 @@ boolean Direction1;      // the rotation direction
 //Turning parameter define
 // int ppr_left = 2920;   // pulse per rotation
 // int ppr_right = 3000;   // pulse per rotation
-int ppr_left = 2820;
-int ppr_right = 2800;
+int ppr_left = 2920;
+int ppr_right = 2900;
 //ppr 2920, turn 90 degree, 1336
 //ppr 2800, turn 90 degree, 1281
 // float pivotD = 6; // Pivot Diameter cm
@@ -109,7 +109,7 @@ void setup() {
   setID(); // Setting the ID's for the TOF sensors to work both at the same time.
 
   // Setpoint distance from the wall for the PID. unit mm
-  Setpoint = 45;
+  Setpoint = 50;
 
   // turn the PID on
   myPID.SetMode(AUTOMATIC);
@@ -125,6 +125,8 @@ boolean turnTaken = true;
 void loop() {
 
   int frontDistance = SharpIR.distance();
+  Serial.print("Front distance:");
+  Serial.println(frontDistance);
   if (turning == 'N')
   {
     if (frontDistance <= 2)
@@ -132,7 +134,7 @@ void loop() {
         robotForward(150,150);
         delay(500);
         robotStop();
-        delay(1000);
+        delay(500);
         checkWall();
       } else{
         setSpeeds();
@@ -144,12 +146,28 @@ void loop() {
         robotForward(150,150);
         delay(500);
         robotStop();
-        delay(1000);
+        delay(500);
         checkWall_Compared();
       } else{
         setSpeeds();
     }
+  }else if (turning == 'B')
+  { 
+    if (frontDistance <= 2)
+  {
+    robotStop();
+    delay(1000);
+    PID_movebackward(1.1);
+    robotStop();
+    delay(1000);
+    PID_moveright(85);
+    PID_moveforward(1);
+    turning = 'N';
+  }else{
+    setSpeeds();
   }
+  }
+  
     
   if(turnTaken == true){
     switch (counter) {
@@ -159,7 +177,6 @@ void loop() {
         delay(500);
         robotStop();
         delay(500);
-        Serial.println("This is Switch");
         turnTaken = false;
         break;
       case 6:
@@ -171,24 +188,10 @@ void loop() {
         turning = 'N';
         turnTaken = false;
         break;
-      // case 10:
-      //   if (frontDistance <= 7)
-      //   {
-      //     robotForward(150,150);
-      //     delay(500);
-      //     robotStop();
-      //     delay(1000);
-      //     checkWall();
-      //   }
-      //   turnTaken = false;
-      //   break;
-      // case 12:
-      //   moveRight(20);
-      //   moveForwardTurns(1.0);
-      //   gripperDown(170);
-      //   gripperOpen();
-      //   startWall = 'E';
-      //   break;
+      case 10:
+        turning = 'B';
+        turnTaken = false;
+        break;
     }
   }
 }
@@ -201,12 +204,11 @@ void checkWall()
   if (startWall == 'R')
   {
       // If not then turn left 90 degrees
-      robotBackward(50,50);
-      delay(500);
-      checkPulse_moveleft(90);
+      robotBackward(30,30);
+      delay(350);
+      PID_moveleft(90);
       robotStop();
       delay(500);
-      counter++; // Increase the counter which keeps track of turns
       turnTaken = true;
   }
   else if (startWall == 'L')
@@ -214,42 +216,59 @@ void checkWall()
     // If following the left wall
 
       // If not then turn right 90 degrees
-      robotBackward(50,50);
-      delay(500);
-      checkPulse_moveright(90);
+      robotBackward(30,30);
+      delay(350);
+      PID_moveright(90);
       robotStop();
       delay(500);
-      counter++; // Increase the counter which keeps track of turns
       turnTaken = true;
       
   }
 }
 
 void checkWall_Compared(){
-
-  if (measureRight.RangeMilliMeter < 100 && measureLeft.RangeMilliMeter > 130)
+  if (turning == 'C')
+  {
+      if (measureRight.RangeMilliMeter < 100 && measureLeft.RangeMilliMeter > 130)
   {
         // If not then turn left 90 degrees
-    robotBackward(50,50);
-    delay(500);
-    checkPulse_moveleft(90);
+    robotBackward(30,30);
+    delay(350);
+    PID_moveleft(90);
     robotStop();
     delay(500);
-    counter++; // Increase the counter which keeps track of turns
     turnTaken = true;
   } else if (measureRight.RangeMilliMeter > 130 && measureLeft.RangeMilliMeter < 100)
   {
     // If following the left wall
 
     // If not then turn right 90 degrees
-    robotBackward(50,50);
+    robotBackward(30,30);
+    delay(350);
+    PID_moveright(90);
+    robotStop();
     delay(500);
-    checkPulse_moveright(90);
+    turnTaken = true;
+  }
+  } else if (turning == 'B')
+  {
+    if (measureRight.RangeMilliMeter > 300 && measureLeft.RangeMilliMeter < 100)
+  {
+    // If following the left wall
+
+    // If not then turn right 90 degrees
+    robotBackward(30,30);
+    delay(350);
+    PID_moveright(90);
     robotStop();
     delay(500);
     counter++; // Increase the counter which keeps track of turns
     turnTaken = true;
   }
+  }
+  
+  
+
 }
 void setSpeeds()
 {
@@ -263,7 +282,7 @@ void setSpeeds()
   {
     Serial.println("This is right follower");
     // Set the speeds of both motors according to the PID. Experimentally determined
-    speedLeft = (baseSpeed + 30) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
+    speedLeft = (baseSpeed + 40) - (int)(Output / 2); // Right speed should be more as we want to follow the left wall.
     speedRight = baseSpeed + (int)(Output / 2);     // Left speed should be higher when it is closer to the wall.
 
   }
@@ -388,7 +407,7 @@ void motorTwoPulse()
     pulseCountRight--;
 }
 
-void checkPulse_moveleft(float angle)
+void PID_moveleft(float angle)
 {
   pulseCountLeft = 0;
   a = true;
@@ -407,9 +426,48 @@ void checkPulse_moveleft(float angle)
     a = false;
    }
   }
+   counter++; // Increase the counter which keeps track of turns
 }
-
-void checkPulse_moveright(float angle)
+void PID_movebackward(float turns)
+{
+  pulseCountLeft = 0;
+  a = true;
+  int pulses = turns * ppr_left;
+  while (a == true)
+  {
+    pid_turning(pulses);
+    if(u < 0){
+    robotBackward(100,110);
+   }else if (u > 0)
+   {
+    robotForward(100,110);
+   } else{
+    robotStop();
+    a = false;
+   }
+  }
+}
+void PID_moveforward(float turns)
+{
+  pulseCountLeft = 0;
+  a = true;
+  int pulses = turns * ppr_left;
+  while (a == true)
+  {
+    pid_turning(pulses);
+    if(u < 0){
+    robotForward(100,100);
+    
+   }else if (u > 0)
+   {
+    robotBackward(100,100);
+   } else{
+    robotStop();
+    a = false;
+   }
+  }
+}
+void PID_moveright(float angle)
 {
   pulseCountLeft = 0;
   a = true;
@@ -428,6 +486,7 @@ void checkPulse_moveright(float angle)
     a = false;
    }
   }
+   counter++; // Increase the counter which keeps track of turns
 }
 void pid_turning(float target){
   float kp = 10;

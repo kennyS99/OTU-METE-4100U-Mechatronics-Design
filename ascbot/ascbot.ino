@@ -329,7 +329,7 @@ void moveForward(float turns)
 
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, HIGH);
-  checkPulse_moveright(turns);
+  PID_moveright(turns);
 }
 
 void moveBackward(int turns)
@@ -340,7 +340,7 @@ void moveBackward(int turns)
 
   digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
-  checkPulse_moveright(turns);
+  PID_moveright(turns);
 }
 
 void moveRight(float angle)
@@ -356,7 +356,7 @@ void moveRight(float angle)
 
   float turns = (angle / 360) * revTire;
 
-  checkPulse_moveright(turns);
+  PID_moveright(turns);
 }
 
 void moveLeft(float angle)
@@ -373,9 +373,9 @@ void moveLeft(float angle)
 
   float turns = (angle / 360) * revTire;
 
-  checkPulse_moveleft(turns);
+  PID_moveleft(turns);
 }
-void checkPulse_moveleft(float turns)
+void PID_moveleft(float turns)
 {
   int pulses = turns * ppr_right;
 
@@ -389,7 +389,7 @@ void checkPulse_moveleft(float turns)
   analogWrite(ENA, 0);
   analogWrite(ENB, 0);
 }
-void checkPulse_moveright(float turns)
+void PID_moveright(float turns)
 {
   int pulses = turns * ppr_left;
 
