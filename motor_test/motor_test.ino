@@ -39,6 +39,10 @@ float pi = 3.14; // Pi
 float revDistance = pi * 10.8;              // distance travelled in 1 revolution
 float revTire = revDistance / (pi * tireD); // per tire need to rotate for one robot rotate
 boolean a;
+
+unsigned long startMillis;
+unsigned long currentMillis;
+const unsigned long period = 2000;
 //-------------------------------------------------------------------//
 
 //-------------------------------------------------------------------//
@@ -119,81 +123,88 @@ void setup() {
 
   startWall = 'L';
   turning = 'N'; //turning algrithms(N means normal case, C means coner cases)
+  startMillis = millis();
   
 }
 boolean turnTaken = true;
 void loop() {
-
-  int frontDistance = SharpIR.distance();
-  Serial.print("Front distance:");
-  Serial.println(frontDistance);
-  if (turning == 'N')
+  currentMillis = millis();
+  if (currentMillis - startMillis >= period)  //test whether the period has elapsed
   {
-    if (frontDistance <= 2)
-    { 
-        robotForward(150,150);
-        delay(500);
-        robotStop();
-        delay(500);
-        checkWall();
-      } else{
-        setSpeeds();
-    }
-  }else if (turning == 'C')
-  {
-    if (frontDistance <= 2)
-    { 
-        robotForward(150,150);
-        delay(500);
-        robotStop();
-        delay(500);
-        checkWall_Compared();
-      } else{
-        setSpeeds();
-    }
-  }else if (turning == 'B')
-  { 
-    if (frontDistance <= 2)
-  {
-    robotStop();
-    delay(1000);
-    PID_movebackward(1.1);
-    robotStop();
-    delay(1000);
-    PID_moveright(85);
-    PID_moveforward(1);
-    turning = 'N';
-  }else{
     setSpeeds();
+    startMillis = currentMillis;  //IMPORTANT to save the start time of the current LED brightness
   }
-  }
+    robotStop();
+    delay(2000);
+    robotBackward(150,150);
+    delay(2000);
+  // int frontDistance = SharpIR.distance();
+  // Serial.print("Front distance:");
+  // Serial.println(frontDistance);
+  // if (turning == 'N')
+  // {
+  //   if (frontDistance <= 2)
+  //   { 
+  //       robotForward(150,150);
+  //       delay(500);
+  //       robotStop();
+  //       delay(500);
+  //       checkWall();
+  //     } else{
+  //       setSpeeds();
+  //   }
+  // }else if (turning == 'C')
+  // {
+  //   if (frontDistance <= 2)
+  //   { 
+  //       robotForward(150,150);
+  //       delay(500);
+  //       robotStop();
+  //       delay(500);
+  //       checkWall_Compared();
+  //     } else{
+  //       setSpeeds();
+  //   }
+  // }else if (turning == 'B')
+  // { 
+  //   if (frontDistance <= 40)
+  // {
+  //   robotStop();
+  //   delay(5000);
+  //   turning = 'N';
+  // }else{
+  //   setSpeeds();
+  // }
+  // }
   
     
-  if(turnTaken == true){
-    switch (counter) {
-      case 3:
-        startWall = 'R';
-        robotForward(150,150);
-        delay(500);
-        robotStop();
-        delay(500);
-        turnTaken = false;
-        break;
-      case 6:
-        turning = 'C';
-        turnTaken = false;
-        break;
-      case 7:
-        startWall = 'L';
-        turning = 'N';
-        turnTaken = false;
-        break;
-      case 10:
-        turning = 'B';
-        turnTaken = false;
-        break;
-    }
-  }
+  // if(turnTaken == true){
+  //   switch (counter) {
+  //     case 1:
+  //       startWall = 'R';
+  //       robotForward(150,150);
+  //       delay(500);
+  //       robotStop();
+  //       delay(500);
+  //       turnTaken = false;
+  //       break;
+  //     case 2:
+  //       setSpeeds();
+  //       delay(2000);
+  //       turning = 'B';
+  //       turnTaken = false;
+  //       break;
+  //     case 7:
+  //       startWall = 'L';
+  //       turning = 'N';
+  //       turnTaken = false;
+  //       break;
+  //     case 10:
+  //       turning = 'B';
+  //       turnTaken = false;
+  //       break;
+  //   }
+  // }
 }
 
 void checkWall()
