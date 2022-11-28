@@ -3,6 +3,7 @@
 #include <Adafruit_VL53L0X.h>
 #include <SharpIR.h>
 #include<HardwareSerial.h>
+#include <elapsedMillis.h>
 
 //-------------------------------------------------------------------//
 //Motor and econder define
@@ -40,9 +41,8 @@ float revDistance = pi * 10.8;              // distance travelled in 1 revolutio
 float revTire = revDistance / (pi * tireD); // per tire need to rotate for one robot rotate
 boolean a;
 
-unsigned long startMillis;
-unsigned long currentMillis;
-const unsigned long period = 2000;
+elapsedMillis timeElapsed;
+unsigned int interval; //one minute in ms
 //-------------------------------------------------------------------//
 
 //-------------------------------------------------------------------//
@@ -123,88 +123,75 @@ void setup() {
 
   startWall = 'L';
   turning = 'N'; //turning algrithms(N means normal case, C means coner cases)
-  startMillis = millis();
-  
 }
 boolean turnTaken = true;
 void loop() {
-  currentMillis = millis();
-  if (currentMillis - startMillis >= period)  //test whether the period has elapsed
+  int frontDistance = SharpIR.distance();
+  Serial.print("Front distance:");
+  Serial.println(frontDistance);
+  if (turning == 'N')
   {
-    setSpeeds();
-    startMillis = currentMillis;  //IMPORTANT to save the start time of the current LED brightness
-  }
+    if (frontDistance <= 2)
+    { 
+        robotForward(150,150);
+        delay(500);
+        robotStop();
+        delay(500);
+        checkWall();
+      } else{
+        setSpeeds();
+    }
+  }else if (turning == 'C')
+  {
+    if (frontDistance <= 2)
+    { 
+        robotForward(150,150);
+        delay(500);
+        robotStop();
+        delay(500);
+        checkWall_Compared();
+      } else{
+        setSpeeds();
+    }
+  }else if (turning == 'B')
+  { 
+    if (frontDistance <= 40)
+  {
     robotStop();
-    delay(2000);
-    robotBackward(150,150);
-    delay(2000);
-  // int frontDistance = SharpIR.distance();
-  // Serial.print("Front distance:");
-  // Serial.println(frontDistance);
-  // if (turning == 'N')
-  // {
-  //   if (frontDistance <= 2)
-  //   { 
-  //       robotForward(150,150);
-  //       delay(500);
-  //       robotStop();
-  //       delay(500);
-  //       checkWall();
-  //     } else{
-  //       setSpeeds();
-  //   }
-  // }else if (turning == 'C')
-  // {
-  //   if (frontDistance <= 2)
-  //   { 
-  //       robotForward(150,150);
-  //       delay(500);
-  //       robotStop();
-  //       delay(500);
-  //       checkWall_Compared();
-  //     } else{
-  //       setSpeeds();
-  //   }
-  // }else if (turning == 'B')
-  // { 
-  //   if (frontDistance <= 40)
-  // {
-  //   robotStop();
-  //   delay(5000);
-  //   turning = 'N';
-  // }else{
-  //   setSpeeds();
-  // }
-  // }
+    delay(5000);
+    turning = 'N';
+  }else{
+    setSpeeds();
+  }
+  }
   
     
-  // if(turnTaken == true){
-  //   switch (counter) {
-  //     case 1:
-  //       startWall = 'R';
-  //       robotForward(150,150);
-  //       delay(500);
-  //       robotStop();
-  //       delay(500);
-  //       turnTaken = false;
-  //       break;
-  //     case 2:
-  //       setSpeeds();
-  //       delay(2000);
-  //       turning = 'B';
-  //       turnTaken = false;
-  //       break;
-  //     case 7:
-  //       startWall = 'L';
-  //       turning = 'N';
-  //       turnTaken = false;
-  //       break;
-  //     case 10:
-  //       turning = 'B';
-  //       turnTaken = false;
-  //       break;
-  //   }
-  // }
+  if(turnTaken == true){
+    switch (counter) {
+      case 1:
+        startWall = 'R';
+        robotForward(150,150);
+        delay(500);
+        robotStop();
+        delay(500);
+        turnTaken = false;
+        break;
+      case 2:
+        setSpeeds_delay(3);
+        turning = 'B';
+        turnTaken = false;
+        break;
+      case 7:
+        startWall = 'L';
+        turning = 'N';
+        turnTaken = false;
+        break;
+      case 10:
+        turning = 'B';
+        turnTaken = false;
+        break;
+    }
+  }
 }
 
 void checkWall()
@@ -277,10 +264,9 @@ void checkWall_Compared(){
     turnTaken = true;
   }
   }
-  
-  
 
 }
+
 void setSpeeds()
 {
   // Measure the distance
@@ -334,6 +320,14 @@ void setSpeeds()
   robotForward(speedLeft,speedRight);
 }
 
+void setSpeeds_delay(int delayTime){
+  timeElapsed = 0;
+  interval = delayTime * 1000;
+  while (timeElapsed < interval)
+  {
+    setSpeeds();
+  }
+}
 void robotForward(int speed_left, int speed_right){
  motor_Left.setSpeed(speed_left);
  motor_Right.setSpeed(speed_right);
