@@ -4,11 +4,13 @@
 #include <SharpIR.h>
 #include<HardwareSerial.h>
 #include <elapsedMillis.h>
+#include <Servo.h>
 
 //-------------------------------------------------------------------//
 //Motor and econder define
 AF_DCMotor motor_Left(1);
 AF_DCMotor motor_Right(2);
+Servo myservo;
 
 const byte encoder0pinA = 18; // A pin -> the left motor
 int encoder0pinB = 26;
@@ -123,12 +125,12 @@ void setup() {
 
   startWall = 'L';
   turning = 'N'; //turning algrithms(N means normal case, C means coner cases)
+  myservo.attach(10);
+  myservo.write(0);     
 }
 boolean turnTaken = true;
 void loop() {
   int frontDistance = SharpIR.distance();
-  Serial.print("Front distance:");
-  Serial.println(frontDistance);
   if (turning == 'N')
   {
     if (frontDistance <= 2)
@@ -155,20 +157,24 @@ void loop() {
     }
   }else if (turning == 'B')
   { 
-    if (frontDistance <= 40)
+    if (measureLeft.RangeMilliMeter > 200 )
   {
+    PID_moveforward(0.5);
     robotStop();
-    delay(5000);
+    delay(1000);
+    checkWall_base();
     turning = 'N';
   }else{
     setSpeeds();
   }
+  }else{
+    setSpeeds();
   }
   
     
   if(turnTaken == true){
     switch (counter) {
-      case 1:
+      case 5:
         startWall = 'R';
         robotForward(150,150);
         delay(500);
@@ -176,20 +182,33 @@ void loop() {
         delay(500);
         turnTaken = false;
         break;
-      case 2:
-        setSpeeds_delay(3);
+      case 6:
+        setSpeeds_delay(2);
         turning = 'B';
         turnTaken = false;
         break;
       case 7:
+        PID_moveforward(0.6);
+        robotStop();
+        delay(1000);
+        soil_collect();
+        robotBackward(110,100);
+        delay(1400);
+        robotForward(30,30);
+        delay(500);
+        robotStop();
+        delay(500);
+        PID_moveleft(110);
+        robotStop();
+        delay(500);
         startWall = 'L';
+        turning = 'C';
+        turnTaken = false;
+        break;
+      case 8:
+        startWall = 'R';
         turning = 'N';
         turnTaken = false;
-        break;
-      case 10:
-        turning = 'B';
-        turnTaken = false;
-        break;
     }
   }
 }
@@ -223,8 +242,19 @@ void checkWall()
       
   }
 }
+void checkWall_base()
+{
+  read_dual_sensors(); // Read both the TOF sensors
+  
+      // If not then turn left 90 degrees
+      PID_moveleft(70);
+      robotStop();
+      delay(500);
+      turnTaken = true; 
+}
 
 void checkWall_Compared(){
+  int frontDistance = SharpIR.distance();
   if (turning == 'C')
   {
       if (measureRight.RangeMilliMeter < 100 && measureLeft.RangeMilliMeter > 130)
@@ -248,24 +278,11 @@ void checkWall_Compared(){
     delay(500);
     turnTaken = true;
   }
-  } else if (turning == 'B')
-  {
-    if (measureRight.RangeMilliMeter > 300 && measureLeft.RangeMilliMeter < 100)
-  {
-    // If following the left wall
-
-    // If not then turn right 90 degrees
-    robotBackward(30,30);
-    delay(350);
-    PID_moveright(90);
-    robotStop();
-    delay(500);
-    counter++; // Increase the counter which keeps track of turns
-    turnTaken = true;
+  
   }
-  }
-
 }
+
+
 
 void setSpeeds()
 {
@@ -590,4 +607,8 @@ void read_dual_sensors()
 {
   lox1.rangingTest(&measureRight, false); // pass in 'true' to get debug data printout!
   lox2.rangingTest(&measureLeft, false);  // pass in 'true' to get debug data printout!
+}
+void soil_collect(){                   
+    myservo.write(180);         
+    delay(700);           
 }
